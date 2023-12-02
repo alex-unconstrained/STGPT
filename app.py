@@ -12,6 +12,19 @@ client = OpenAI()
 # Your chosen model
 MODEL = "gpt-4-1106-preview"
 
+# Initialize session state variables
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+if "run" not in st.session_state:
+    st.session_state.run = {"status": None}
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "retry_error" not in st.session_state:
+    st.session_state.retry_error = 0
+    
 # Set up the page with UnconstrainED branding
 primary_color = "#F28705"  # Orange
 secondary_color = "#210140"  # Deep Purple
