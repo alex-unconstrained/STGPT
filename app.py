@@ -9,6 +9,9 @@ from openai import OpenAI
 # Initialize OpenAI client
 client = OpenAI()
 
+# Your chosen model
+MODEL = "gpt-4-1106-preview"
+
 # Set up the page with UnconstrainED branding
 primary_color = "#F28705"  # Orange
 secondary_color = "#210140"  # Deep Purple
@@ -42,7 +45,7 @@ assistant_keys = {
 }
 
 # Update the assistant based on the choice
-st.session_state.assistant = openai.Assistant.retrieve(st.secrets[assistant_keys[assistant_choice]])
+st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets[assistant_keys[assistant_choice]])
 
 # File uploader for CSV, XLS, XLSX, PDF, and Image files
 uploaded_file = st.file_uploader("Upload your file", type=["csv", "xls", "xlsx", "pdf", "png", "jpg", "jpeg"])
