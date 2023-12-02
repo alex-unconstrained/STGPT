@@ -1,17 +1,14 @@
- # Importing required packages
 import streamlit as st
 import openai
 import uuid
 import time
 import pandas as pd
 import io
-from openai import OpenAI
+
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Initialize OpenAI client
-client = OpenAI()
-
-# Your chosen model
-MODEL = "gpt-4-1106-preview"
+client = openai.Client()
 
 # Initialize session state variables
 if "session_id" not in st.session_state:
@@ -26,48 +23,71 @@ if "messages" not in st.session_state:
 if "retry_error" not in st.session_state:
     st.session_state.retry_error = 0
 
-# Set up the page
-st.set_page_config(page_title="Enter title here")
-st.sidebar.title("Title")
-st.sidebar.divider()
-st.sidebar.markdown("Your name", unsafe_allow_html=True)
-st.sidebar.markdown("Assistant GPT")
+# Set up the page with UnconstrainED branding
+primary_color = "#F28705"  # Orange
+secondary_color = "#210140"  # Deep Purple
+st.set_page_config(page_title="UnconstrainED Chat", page_icon=":school:", layout="wide")
+st.markdown(f"""
+    <style>
+    .stApp {{
+        background-color: {secondary_color};
+        color: {primary_color};
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+st.sidebar.image("logo.png", width=150)
+st.sidebar.title("UnconstrainED Assistant")
+
+# Assistant selection
+assistant_choice = st.sidebar.selectbox(
+    "Select Assistant",
+    ["InterVU", "3Ps Prompt Builder", "Educational Media Analyst"],
+    index=0
+)
 st.sidebar.divider()
 
-# File uploader for CSV, XLS, XLSX
-uploaded_file = st.file_uploader("Upload your file", type=["csv", "xls", "xlsx"])
+# Map assistant names to assistant IDs
+assistant_ids = {
+    "InterVU": st.secrets["InterVU"],
+    "3Ps Prompt Builder": "PromptBuilder_assistant_id",
+    "Educational Media Analyst": "MediaAnalyst_assistant_id"
+}
+
+# Set the OpenAI assistant based on the user's choice
+st.session_state.assistant = openai.Assistant.retrieve(st.secrets[assistant_ids[assistant_choice]])
+
+# File uploader for CSV, XLS, XLSX, PDF, and Image
+uploaded_file = st.file_uploader("Upload your file", type=["csv", "xls", "xlsx", "pdf", "png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
-    # Determine the file type
+    # Handle different file types
     file_type = uploaded_file.type
-
     try:
-        # Read the file into a Pandas DataFrame
-        if file_type == "text/csv":
-            df = pd.read_csv(uploaded_file)
-        elif file_type in ["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]:
-            df = pd.read_excel(uploaded_file)
-
-        # Convert DataFrame to JSON
-        json_str = df.to_json(orient='records', indent=4)
-        file_stream = io.BytesIO(json_str.encode())
-
-        # Upload JSON data to OpenAI and store the file ID
-        file_response = client.files.create(file=file_stream, purpose='answers')
-        st.session_state.file_id = file_response.id
-        st.success("File uploaded successfully to OpenAI!")
-
-        # Optional: Display and Download JSON
-        st.text_area("JSON Output", json_str, height=300)
-        st.download_button(label="Download JSON", data=json_str, file_name="converted.json", mime="application/json")
-    
+        if file_type in ["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]:
+            # Process CSV or Excel files
+            df = pd.read_csv(uploaded_file) if file_type == "text/csv" else pd.read_excel(uploaded_file)
+            json_str = df.to_json(orient='records', indent=4)
+            file_stream = io.BytesIO(json_str.encode())
+            file_response = client.files.create(file=file_stream, purpose='answers')
+            st.session_state.file_id = file_response.id
+            st.text_area("JSON Output", json_str, height=300)
+            st.download_button(label="Download JSON", data=json_str, file_name="converted.json", mime="application/json")
+        elif file_type in ["application/pdf", "image/png", "image/jpeg"]:
+            # Display PDF or Image files
+            st.write("Uploaded File:")
+            st.write(uploaded_file.name)
+            if file_type == "application/pdf":
+                st.download_button(label="Download PDF", data=uploaded_file.getvalue(), file_name=uploaded_file.name, mime="application/pdf")
+            else:
+                st.image(uploaded_file)
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
+# Chat functionality
 # Initialize OpenAI assistant
 if "assistant" not in st.session_state:
     openai.api_key = st.secrets["OPENAI_API_KEY"]
-    st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets["OPENAI_ASSISTANT"])
     st.session_state.thread = client.beta.threads.create(
         metadata={'session_id': st.session_state.session_id}
     )
