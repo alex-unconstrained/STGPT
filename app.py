@@ -4,68 +4,56 @@ import uuid
 import time
 import pandas as pd
 import io
-
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+from openai import OpenAI
 
 # Initialize OpenAI client
-client = openai.Client()
-
-# Initialize session state variables
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-if "run" not in st.session_state:
-    st.session_state.run = {"status": None}
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "retry_error" not in st.session_state:
-    st.session_state.retry_error = 0
+client = OpenAI()
 
 # Set up the page with UnconstrainED branding
 primary_color = "#F28705"  # Orange
 secondary_color = "#210140"  # Deep Purple
-st.set_page_config(page_title="UnconstrainED Chat", page_icon=":school:", layout="wide")
+st.set_page_config(page_title="UnconstrainED Chat", layout="wide")
 st.markdown(f"""
     <style>
     .stApp {{
         background-color: {secondary_color};
+    }}
+    .st-bv {{
         color: {primary_color};
     }}
     </style>
     """, unsafe_allow_html=True)
 
+# Displaying the UnconstrainED logo
 st.sidebar.image("logo.png", width=150)
-st.sidebar.title("UnconstrainED Assistant")
 
 # Assistant selection
 assistant_choice = st.sidebar.selectbox(
-    "Select Assistant",
+    "Choose Your Assistant",
     ["InterVU", "3Ps Prompt Builder", "Educational Media Analyst"],
     index=0
 )
-st.sidebar.divider()
 
-# Map assistant names to assistant IDs
-assistant_ids = {
-    "InterVU": st.secrets["InterVU"],
-    "3Ps Prompt Builder": "PromptBuilder_assistant_id",
-    "Educational Media Analyst": "MediaAnalyst_assistant_id"
+# Map assistant names to secret keys
+assistant_keys = {
+    "InterVU": "InterVU_secret_key",
+    "3Ps Prompt Builder": "PromptBuilder_secret_key",
+    "Educational Media Analyst": "MediaAnalyst_secret_key"
 }
 
-# Set the OpenAI assistant based on the user's choice
-st.session_state.assistant = openai.Assistant.retrieve(st.secrets[assistant_ids[assistant_choice]])
+# Update the assistant based on the choice
+st.session_state.assistant = openai.Assistant.retrieve(st.secrets[assistant_keys[assistant_choice]])
 
-# File uploader for CSV, XLS, XLSX, PDF, and Image
+# File uploader for CSV, XLS, XLSX, PDF, and Image files
 uploaded_file = st.file_uploader("Upload your file", type=["csv", "xls", "xlsx", "pdf", "png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
-    # Handle different file types
+    # Determine the file type
     file_type = uploaded_file.type
+
     try:
+        # Read the file into a Pandas DataFrame or display PDF/Image
         if file_type in ["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]:
-            # Process CSV or Excel files
             df = pd.read_csv(uploaded_file) if file_type == "text/csv" else pd.read_excel(uploaded_file)
             json_str = df.to_json(orient='records', indent=4)
             file_stream = io.BytesIO(json_str.encode())
@@ -74,17 +62,10 @@ if uploaded_file is not None:
             st.text_area("JSON Output", json_str, height=300)
             st.download_button(label="Download JSON", data=json_str, file_name="converted.json", mime="application/json")
         elif file_type in ["application/pdf", "image/png", "image/jpeg"]:
-            # Display PDF or Image files
-            st.write("Uploaded File:")
-            st.write(uploaded_file.name)
-            if file_type == "application/pdf":
-                st.download_button(label="Download PDF", data=uploaded_file.getvalue(), file_name=uploaded_file.name, mime="application/pdf")
-            else:
-                st.image(uploaded_file)
+            st.image(uploaded_file)
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-# Chat functionality
 # Initialize OpenAI assistant
 if "assistant" not in st.session_state:
     openai.api_key = st.secrets["OPENAI_API_KEY"]
