@@ -24,7 +24,7 @@ if "messages" not in st.session_state:
 
 if "retry_error" not in st.session_state:
     st.session_state.retry_error = 0
-    
+
 # Set up the page with UnconstrainED branding
 primary_color = "#F28705"  # Orange
 secondary_color = "#FFFFFF"  # White
@@ -48,7 +48,7 @@ st.sidebar.link_button("UnconstrainED Website", "https://unconstrained.work")
 assistant_choice = st.sidebar.selectbox(
     "Choose Your Assistant",
     ["InterVU", "3Ps Prompt Builder", "Educational Media Analyst"],
-    index=0
+    index=1  # Default to "3Ps Prompt Builder"
 )
 
 # Map assistant names to secret keys
@@ -58,8 +58,29 @@ assistant_keys = {
     "Educational Media Analyst": "MediaAnalyst_secret_key"
 }
 
+# Set default assistant to "3Ps Prompt Builder"
+default_assistant_key = "PromptBuilder_secret_key"
+if "assistant" not in st.session_state:
+    st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets[default_assistant_key])
+
+# Initialize OpenAI assistant thread
+if "thread" not in st.session_state:
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+    st.session_state.thread = client.beta.threads.create(
+        metadata={'session_id': st.session_state.session_id},
+        assistant_id=st.session_state.assistant.id
+    )
+
 # Update the assistant based on the choice
-st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets[assistant_keys[assistant_choice]])
+if assistant_choice in assistant_keys:
+    selected_assistant_key = assistant_keys[assistant_choice]
+    if selected_assistant_key != default_assistant_key:
+        st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets[selected_assistant_key])
+        # Update the thread for the new assistant
+        st.session_state.thread = client.beta.threads.create(
+            metadata={'session_id': st.session_state.session_id},
+            assistant_id=st.session_state.assistant.id
+        )
 
 # File uploader for CSV, XLS, XLSX, PDF, and Image files
 uploaded_file = st.file_uploader("Upload your file", type=["csv", "xls", "xlsx", "pdf", "png", "jpg", "jpeg"])
@@ -83,15 +104,8 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-# Initialize OpenAI assistant
-if "assistant" not in st.session_state:
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-    st.session_state.thread = client.beta.threads.create(
-        metadata={'session_id': st.session_state.session_id}
-    )
-
 # Display chat messages
-elif "thread" in st.session_state and hasattr(st.session_state.run, 'status') and st.session_state.run.status == "completed":
+if hasattr(st.session_state.run, 'status') and st.session_state.run.status == "completed":
     st.session_state.messages = client.beta.threads.messages.list(
         thread_id=st.session_state.thread.id
     )
@@ -109,12 +123,9 @@ if prompt := st.chat_input("How can I help you?"):
 
     message_data = {
         "role": "user",
-        "content": prompt
+        "content": prompt,
+        "thread_id": st.session_state.thread.id
     }
-
-    # Add thread_id only if it is initialized
-    if "thread" in st.session_state:
-        message_data["thread_id"] = st.session_state.thread.id
 
     # Include file ID in the request if available
     if "file_id" in st.session_state:
