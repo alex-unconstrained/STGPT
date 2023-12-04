@@ -67,20 +67,13 @@ if "assistant" not in st.session_state:
 if "thread" not in st.session_state:
     openai.api_key = st.secrets["OPENAI_API_KEY"]
     st.session_state.thread = client.beta.threads.create(
-        metadata={'session_id': st.session_state.session_id},
-        assistant_id=st.session_state.assistant.id
+        metadata={'session_id': st.session_state.session_id}
     )
 
 # Update the assistant based on the choice
-if assistant_choice in assistant_keys:
-    selected_assistant_key = assistant_keys[assistant_choice]
-    if selected_assistant_key != default_assistant_key:
-        st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets[selected_assistant_key])
-        # Update the thread for the new assistant
-        st.session_state.thread = client.beta.threads.create(
-            metadata={'session_id': st.session_state.session_id},
-            assistant_id=st.session_state.assistant.id
-        )
+selected_assistant_key = assistant_keys[assistant_choice]
+if selected_assistant_key != default_assistant_key:
+    st.session_state.assistant = openai.beta.assistants.retrieve(st.secrets[selected_assistant_key])
 
 # File uploader for CSV, XLS, XLSX, PDF, and Image files
 uploaded_file = st.file_uploader("Upload your file", type=["csv", "xls", "xlsx", "pdf", "png", "jpg", "jpeg"])
@@ -112,8 +105,8 @@ if hasattr(st.session_state.run, 'status') and st.session_state.run.status == "c
     for message in reversed(st.session_state.messages.data):
         if message.role in ["user", "assistant"]:
             with st.chat_message(message.role):
-                for content_part in message.content:
-                    message_text = content_part.text.value
+                for content part in message.content:
+                    message_text = content part.text.value
                     st.markdown(message_text)
 
 # Chat input and message creation with file ID
