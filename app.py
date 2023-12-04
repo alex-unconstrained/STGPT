@@ -27,7 +27,7 @@ if "retry_error" not in st.session_state:
     
 # Set up the page with UnconstrainED branding
 primary_color = "#F28705"  # Orange
-secondary_color = "#210140"  # Deep Purple
+secondary_color = "#FFFFFF"  # White
 st.set_page_config(page_title="UnconstrainED Chat", layout="wide")
 st.markdown(f"""
     <style>
@@ -42,6 +42,7 @@ st.markdown(f"""
 
 # Displaying the UnconstrainED logo
 st.sidebar.image("logo.png", width=150)
+st.sidebar.link_button("UnconstrainED Website", "https://unconstrained.work")
 
 # Assistant selection
 assistant_choice = st.sidebar.selectbox(
