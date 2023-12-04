@@ -105,8 +105,8 @@ if hasattr(st.session_state.run, 'status') and st.session_state.run.status == "c
     for message in reversed(st.session_state.messages.data):
         if message.role in ["user", "assistant"]:
             with st.chat_message(message.role):
-                for content part in message.content:
-                    message_text = content part.text.value
+                for content_part in message.content:
+                    message_text = content_part.text.value
                     st.markdown(message_text)
 
 # Chat input and message creation with file ID
