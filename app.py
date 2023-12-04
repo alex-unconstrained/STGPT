@@ -91,7 +91,7 @@ if "assistant" not in st.session_state:
     )
 
 # Display chat messages
-elif hasattr(st.session_state.run, 'status') and st.session_state.run.status == "completed":
+elif "thread" in st.session_state and hasattr(st.session_state.run, 'status') and st.session_state.run.status == "completed":
     st.session_state.messages = client.beta.threads.messages.list(
         thread_id=st.session_state.thread.id
     )
@@ -108,10 +108,13 @@ if prompt := st.chat_input("How can I help you?"):
         st.write(prompt)
 
     message_data = {
-        "thread_id": st.session_state.thread.id,
         "role": "user",
         "content": prompt
     }
+
+    # Add thread_id only if it is initialized
+    if "thread" in st.session_state:
+        message_data["thread_id"] = st.session_state.thread.id
 
     # Include file ID in the request if available
     if "file_id" in st.session_state:
